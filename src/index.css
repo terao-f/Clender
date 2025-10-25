@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* スクロール関連の改善 */
+html, body {
+  /* スムーズなスクロール */
+  scroll-behavior: smooth;
+  /* iOS Safariでのバウンススクロールを制御 */
+  -webkit-overflow-scrolling: touch;
+  /* 高さの設定 */
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* 全体のオーバーフロー制御 */
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+/* スマホでのスクロール最適化 */
+@media (max-width: 768px) {
+  /* スクロール可能な要素に対してオーバースクロール動作を制御 */
+  .overflow-y-auto,
+  .overflow-y-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+  
+  /* モバイルでのスクロール改善 */
+  * {
+    /* タッチ時のハイライトを無効化 */
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* プルダウン更新を防ぐための設定（緩和） */
+body {
+  /* プルトゥリフレッシュを制御（無効化ではなく制御） */
+  overscroll-behavior-y: contain;
+}
+
+/* フレックスレイアウトの修正 */
+.flex-1 {
+  min-height: 0;
+}
+
+/* スクロール可能なコンテナの明示的な指定 */
+.overflow-auto,
+.overflow-y-auto,
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* モーダル表示時の背景固定 */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+}

@@ -1,0 +1,27 @@
+{
+  "to": ["k.sho626626@gmail.com"],
+  "type": "created",
+  "schedule": {
+    "id": "test-schedule-123",
+    "title": "テスト会議",
+    "description": "これはテスト用の会議です",
+    "startTime": "2025-01-25T10:00:00.000Z",
+    "endTime": "2025-01-25T11:00:00.000Z",
+    "type": "meeting",
+    "location": "会議室A",
+    "meetLink": "https://meet.google.com/test-link",
+    "participants": [
+      {
+        "id": "user1",
+        "name": "山田太郎",
+        "email": "yamada@example.com"
+      },
+      {
+        "id": "user2", 
+        "name": "佐藤花子",
+        "email": "sato@example.com"
+      }
+    ]
+  },
+  "appUrl": "https://your-app-domain.vercel.app"
+}

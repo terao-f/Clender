@@ -1,0 +1,163 @@
+// Edge Function Code for send-schedule-notification-email
+// このコードをSupabaseダッシュボードのEdge Functionエディタにコピー＆ペーストしてください
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+}
+
+// テストモード設定（全てのメールをあなたのアドレスに送信）
+const TEST_MODE = true; 
+const TEST_EMAIL = 'k.sho626626@gmail.com';
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+    const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || 'onboarding@resend.dev'
+    const RESEND_FROM_NAME = Deno.env.get('RESEND_FROM_NAME') || 'terao-f スケジューラー'
+    
+    if (!RESEND_API_KEY) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'RESEND_API_KEY is not set' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const requestBody = await req.json()
+    const { to, type, schedule, reminderMinutes, appUrl, operatorName } = requestBody
+
+    // テストモードの場合、全てのメールをTEST_EMAILに送信
+    const actualRecipients = TEST_MODE ? [TEST_EMAIL] : to;
+    
+    console.log('TEST_MODE:', TEST_MODE)
+    console.log('Original recipients:', to)
+    console.log('Actual recipients:', actualRecipients)
+
+    // メール内容を生成
+    const subject = generateSubject(type, schedule)
+    const html = generateHtml(type, schedule, appUrl, operatorName, to)
+    
+    const emailPayload = {
+      from: `${RESEND_FROM_NAME} <${RESEND_FROM_EMAIL}>`,
+      to: actualRecipients,
+      subject: TEST_MODE ? `[TEST] ${subject}` : subject,
+      html: TEST_MODE ? addTestModeHeader(html, to) : html,
+    }
+    
+    // Resend APIを呼び出し
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(emailPayload),
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('Resend API error:', error)
+      return new Response(
+        JSON.stringify({ success: false, error }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const result = await response.json()
+    return new Response(
+      JSON.stringify({ success: true, data: result }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+    
+  } catch (error) {
+    console.error('Edge Function error:', error)
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+})
+
+function generateSubject(type, schedule) {
+  switch (type) {
+    case 'created':
+      return `新しいスケジュール: ${schedule.title}`
+    case 'updated':
+      return `スケジュール更新: ${schedule.title}`
+    case 'deleted':
+      return `スケジュール削除: ${schedule.title}`
+    default:
+      return `スケジュール通知: ${schedule.title}`
+  }
+}
+
+function generateHtml(type, schedule, appUrl, operatorName, originalRecipients) {
+  const startTime = new Date(schedule.startTime).toLocaleString('ja-JP')
+  const endTime = new Date(schedule.endTime).toLocaleString('ja-JP')
+  
+  let actionText = ''
+  switch (type) {
+    case 'created':
+      actionText = '新しいスケジュールが作成されました'
+      break
+    case 'updated':
+      actionText = 'スケジュールが更新されました'
+      break
+    case 'deleted':
+      actionText = 'スケジュールが削除されました'
+      break
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4A90E2; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f5f5f5; padding: 20px; margin-top: 20px; }
+        .button { display: inline-block; padding: 10px 20px; background-color: #4A90E2; color: white; text-decoration: none; border-radius: 5px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>スケジュール通知</h1>
+        </div>
+        <div class="content">
+          <h2>${actionText}</h2>
+          <p><strong>タイトル:</strong> ${schedule.title}</p>
+          <p><strong>開始:</strong> ${startTime}</p>
+          <p><strong>終了:</strong> ${endTime}</p>
+          ${schedule.description ? `<p><strong>詳細:</strong> ${schedule.description}</p>` : ''}
+          ${schedule.location ? `<p><strong>場所:</strong> ${schedule.location}</p>` : ''}
+          ${schedule.meetLink ? `<p><strong>Meet URL:</strong> <a href="${schedule.meetLink}">${schedule.meetLink}</a></p>` : ''}
+          ${operatorName ? `<p><strong>操作者:</strong> ${operatorName}</p>` : ''}
+          <br>
+          <a href="${appUrl}/calendar/my?scheduleId=${schedule.id}" class="button">スケジュールを確認</a>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+function addTestModeHeader(html, originalRecipients) {
+  const testHeader = `
+    <div style="background-color: #FEF2E8; padding: 10px; margin-bottom: 20px; border: 1px solid #FCA311; border-radius: 5px;">
+      <strong>⚠️ テストモード:</strong> このメールは本来以下の宛先に送信される予定でした:<br/>
+      ${originalRecipients.join(', ')}
+    </div>
+  `
+  return html.replace('<body>', `<body>${testHeader}`)
+}

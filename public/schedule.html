@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スケジュール詳細へリダイレクト中...</title>
+    <style>
+        body {
+            font-family: 'Hiragino Sans', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            backdrop-filter: blur(10px);
+        }
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        a {
+            color: white;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>スケジュール詳細へリダイレクト中...</h2>
+        <div class="spinner"></div>
+        <p>自動的にリダイレクトされない場合は、<a href="#" id="manualLink">こちらをクリック</a>してください。</p>
+    </div>
+    <script>
+        // URLパラメータを取得
+        const params = new URLSearchParams(window.location.search);
+        const scheduleId = params.get('id');
+        
+        if (scheduleId) {
+            // リダイレクト先URL
+            const redirectUrl = `/calendar/my?scheduleId=${scheduleId}`;
+            
+            // 手動リンクのhrefを設定
+            document.getElementById('manualLink').href = redirectUrl;
+            
+            // 自動リダイレクト
+            setTimeout(() => {
+                window.location.href = redirectUrl;
+            }, 1000);
+        } else {
+            // scheduleIdがない場合はカレンダーのトップへ
+            window.location.href = '/calendar/my';
+        }
+    </script>
+</body>
+</html>
