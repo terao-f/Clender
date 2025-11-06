@@ -85,3 +85,5 @@ jspm_packages/
 
 # TernJS port file
 .tern-port
+
+src/pages/calendar/Sample Reservation.tsx
